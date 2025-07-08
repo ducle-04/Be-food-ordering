@@ -43,7 +43,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Các trường không được để trống");
         }
 
-     // Không mã hóa ở đây, để UserService xử lý
         User user = userService.registerUser(username, password, email, "USER");
         return ResponseEntity.ok("Đăng ký người dùng thành công");
     }

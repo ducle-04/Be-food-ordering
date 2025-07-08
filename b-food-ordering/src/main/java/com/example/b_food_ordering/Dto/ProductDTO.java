@@ -1,39 +1,35 @@
-package com.example.b_food_ordering.Entity;
+package com.example.b_food_ordering.Dto;
 
-import jakarta.persistence.*;
 import lombok.Data;
 
-@Entity
 @Data
-@Table(name = "products")
-public class Product {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ProductDTO {
     private Long id;
-    
-    @Column(nullable = false)
     private String name;
-    
     private String description;
-    
-    @Column(nullable = false)
     private double originalPrice;
-    
     private double discountedPrice;
-    
     private double discount;
-    
-    @Column(nullable = false)
     private String category;
-    
     private String img;
-    
-    // Thêm trường trạng thái
-    @Column(nullable = false)
-    private String status; // Có thể là "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED", etc.
-    
-    // Thêm trường danh mục đặc biệt
-    private String specialCategory; // Ví dụ: "FEATURED", "NEW", "BESTSELLER", etc.
+    private String status; // Thêm trường trạng thái
+    private String specialCategory; // Thêm trường danh mục đặc biệt
+
+    public ProductDTO() {}
+
+    public ProductDTO(Long id, String name, String description, double originalPrice, double discountedPrice, 
+                     double discount, String category, String img, String status, String specialCategory) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.originalPrice = originalPrice;
+        this.discountedPrice = discountedPrice;
+        this.discount = discount;
+        this.category = category;
+        this.img = img;
+        this.status = status;
+        this.specialCategory = specialCategory;
+    }
 
     public Long getId() {
         return id;
