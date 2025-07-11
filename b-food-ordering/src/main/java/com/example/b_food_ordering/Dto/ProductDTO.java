@@ -5,30 +5,35 @@ import lombok.Data;
 @Data
 public class ProductDTO {
     private Long id;
-    private String name;
-    private String description;
-    private double originalPrice;
-    private double discountedPrice;
-    private double discount;
-    private String category;
-    private String img;
-    private String status; // Thêm trường trạng thái
-    private String specialCategory; // Thêm trường danh mục đặc biệt
+    private String name; // Tên sản phẩm
+    private String description; // Mô tả sản phẩm
+    private double originalPrice; // Giá gốc
+    private double discountedPrice; // Giá sau khi giảm
+    private double discount; // Phần trăm giảm giá
+    private Long productTypeId; // ID của loại sản phẩm
+    private String productTypeName; // Tên loại sản phẩm (ví dụ: "Food", "Drink", "Dessert")
+    private String img; // Đường dẫn ảnh sản phẩm
+    private String status; // Trạng thái (ví dụ: "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED")
+    private Long categoryId; // ID của danh mục (có thể null)
+    private String categoryName; // Tên danh mục (ví dụ: "FEATURED", "NEW", "BESTSELLER")
 
     public ProductDTO() {}
 
     public ProductDTO(Long id, String name, String description, double originalPrice, double discountedPrice, 
-                     double discount, String category, String img, String status, String specialCategory) {
+                     double discount, Long productTypeId, String productTypeName, String img, String status, 
+                     Long categoryId, String categoryName) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.originalPrice = originalPrice;
         this.discountedPrice = discountedPrice;
         this.discount = discount;
-        this.category = category;
+        this.productTypeId = productTypeId;
+        this.productTypeName = productTypeName;
         this.img = img;
         this.status = status;
-        this.specialCategory = specialCategory;
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
     }
 
     public Long getId() {
@@ -79,12 +84,20 @@ public class ProductDTO {
         this.discount = discount;
     }
 
-    public String getCategory() {
-        return category;
+    public Long getProductTypeId() {
+        return productTypeId;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setProductTypeId(Long productTypeId) {
+        this.productTypeId = productTypeId;
+    }
+
+    public String getProductTypeName() {
+        return productTypeName;
+    }
+
+    public void setProductTypeName(String productTypeName) {
+        this.productTypeName = productTypeName;
     }
 
     public String getImg() {
@@ -103,11 +116,19 @@ public class ProductDTO {
         this.status = status;
     }
 
-    public String getSpecialCategory() {
-        return specialCategory;
+    public Long getCategoryId() {
+        return categoryId;
     }
 
-    public void setSpecialCategory(String specialCategory) {
-        this.specialCategory = specialCategory;
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
     }
 }

@@ -1,13 +1,12 @@
 package com.example.b_food_ordering.Controller;
 
+import com.example.b_food_ordering.Dto.ProductDTO;
+import com.example.b_food_ordering.Service.ProductService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.b_food_ordering.Dto.ProductDTO;
-import com.example.b_food_ordering.Service.ProductService;
-
 import java.net.URL;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +17,7 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // Danh sách các trạng thái hợp lệ (giả sử sử dụng String, thay bằng enum nếu cần)
-    private static final List<String> VALID_STATUSES = Arrays.asList("AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED");
-    private static final List<String> VALID_SPECIAL_CATEGORIES = Arrays.asList("FEATURED", "NEW", "BESTSELLER");
-
+    @Autowired
     public ProductController(ProductService productService) {
         this.productService = productService;
     }
@@ -29,31 +25,13 @@ public class ProductController {
     // Tạo sản phẩm mới
     @PostMapping
     public ResponseEntity<?> createProduct(@RequestBody ProductDTO productDTO) {
-        // Kiểm tra đầu vào
         if (productDTO.getName() == null || productDTO.getName().trim().isEmpty() ||
-            productDTO.getCategory() == null || productDTO.getCategory().trim().isEmpty() ||
+            productDTO.getProductTypeId() == null ||
             productDTO.getStatus() == null || productDTO.getStatus().trim().isEmpty() ||
             productDTO.getOriginalPrice() <= 0) {
-            return ResponseEntity.badRequest().body("Tên sản phẩm, danh mục, trạng thái và giá gốc không được để trống hoặc không hợp lệ");
+            return ResponseEntity.badRequest().body("Tên sản phẩm, ID loại sản phẩm, trạng thái và giá gốc không được để trống hoặc không hợp lệ");
         }
 
-        // Kiểm tra trạng thái hợp lệ
-        if (!VALID_STATUSES.contains(productDTO.getStatus())) {
-            return ResponseEntity.badRequest().body("Trạng thái không hợp lệ. Phải là một trong: " + VALID_STATUSES);
-        }
-
-        // Kiểm tra danh mục đặc biệt nếu có
-        if (productDTO.getSpecialCategory() != null && !productDTO.getSpecialCategory().trim().isEmpty() &&
-            !VALID_SPECIAL_CATEGORIES.contains(productDTO.getSpecialCategory())) {
-            return ResponseEntity.badRequest().body("Danh mục đặc biệt không hợp lệ. Phải là một trong: " + VALID_SPECIAL_CATEGORIES);
-        }
-
-        // Kiểm tra giá giảm và tỷ lệ giảm giá
-        if (productDTO.getDiscountedPrice() < 0 || productDTO.getDiscount() < 0) {
-            return ResponseEntity.badRequest().body("Giá giảm và tỷ lệ giảm giá không được âm");
-        }
-
-        // Kiểm tra định dạng URL hình ảnh nếu có
         if (productDTO.getImg() != null && !productDTO.getImg().trim().isEmpty()) {
             try {
                 new URL(productDTO.getImg()).toURI();
@@ -68,8 +46,10 @@ public class ProductController {
             response.put("message", "Tạo sản phẩm thành công");
             response.put("product", createdProduct);
             return ResponseEntity.status(201).body(response);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Lỗi khi tạo sản phẩm: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi tạo sản phẩm: " + e.getMessage());
         }
     }
 
@@ -84,6 +64,24 @@ public class ProductController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi khi lấy danh sách sản phẩm: " + e.getMessage());
+        }
+    }
+
+    // Tìm sản phẩm theo tên (gần đúng)
+    @GetMapping("/search")
+    public ResponseEntity<?> searchProductsByName(@RequestParam("name") String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Tên sản phẩm không được để trống");
+        }
+
+        try {
+            List<ProductDTO> products = productService.searchProductsByName(name);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Tìm kiếm sản phẩm thành công");
+            response.put("products", products);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi tìm kiếm sản phẩm: " + e.getMessage());
         }
     }
 
@@ -105,33 +103,55 @@ public class ProductController {
         }
     }
 
+    // Lấy sản phẩm theo ID loại sản phẩm
+    @GetMapping("/by-product-type/{productTypeId}")
+    public ResponseEntity<?> getProductsByProductTypeId(@PathVariable Long productTypeId) {
+        if (productTypeId == null || productTypeId <= 0) {
+            return ResponseEntity.badRequest().body("ID loại sản phẩm không hợp lệ");
+        }
+
+        try {
+            List<ProductDTO> products = productService.getProductsByProductTypeId(productTypeId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Lấy danh sách sản phẩm theo loại sản phẩm thành công");
+            response.put("products", products);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Lỗi: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi lấy danh sách sản phẩm: " + e.getMessage());
+        }
+    }
+
+    // Lấy sản phẩm theo ID danh mục
+    @GetMapping("/by-category/{categoryId}")
+    public ResponseEntity<?> getProductsByCategoryId(@PathVariable Long categoryId) {
+        if (categoryId == null || categoryId <= 0) {
+            return ResponseEntity.badRequest().body("ID danh mục không hợp lệ");
+        }
+
+        try {
+            List<ProductDTO> products = productService.getProductsByCategoryId(categoryId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Lấy danh sách sản phẩm theo danh mục thành công");
+            response.put("products", products);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Lỗi: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi lấy danh sách sản phẩm: " + e.getMessage());
+        }
+    }
+
     // Cập nhật sản phẩm
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
         if (id == null || id <= 0 || productDTO.getName() == null || productDTO.getName().trim().isEmpty() ||
-            productDTO.getCategory() == null || productDTO.getCategory().trim().isEmpty() ||
-            productDTO.getStatus() == null || productDTO.getStatus().trim().isEmpty() ||
-            productDTO.getOriginalPrice() <= 0) {
-            return ResponseEntity.badRequest().body("ID sản phẩm, tên sản phẩm, danh mục, trạng thái hoặc giá gốc không hợp lệ");
+            productDTO.getProductTypeId() == null || productDTO.getStatus() == null ||
+            productDTO.getStatus().trim().isEmpty() || productDTO.getOriginalPrice() <= 0) {
+            return ResponseEntity.badRequest().body("ID sản phẩm, tên sản phẩm, ID loại sản phẩm, trạng thái hoặc giá gốc không hợp lệ");
         }
 
-        // Kiểm tra trạng thái hợp lệ
-        if (!VALID_STATUSES.contains(productDTO.getStatus())) {
-            return ResponseEntity.badRequest().body("Trạng thái không hợp lệ. Phải là một trong: " + VALID_STATUSES);
-        }
-
-        // Kiểm tra danh mục đặc biệt nếu có
-        if (productDTO.getSpecialCategory() != null && !productDTO.getSpecialCategory().trim().isEmpty() &&
-            !VALID_SPECIAL_CATEGORIES.contains(productDTO.getSpecialCategory())) {
-            return ResponseEntity.badRequest().body("Danh mục đặc biệt không hợp lệ. Phải là một trong: " + VALID_SPECIAL_CATEGORIES);
-        }
-
-        // Kiểm tra giá giảm và tỷ lệ giảm giá
-        if (productDTO.getDiscountedPrice() < 0 || productDTO.getDiscount() < 0) {
-            return ResponseEntity.badRequest().body("Giá giảm và tỷ lệ giảm giá không được âm");
-        }
-
-        // Kiểm tra định dạng URL hình ảnh nếu có
         if (productDTO.getImg() != null && !productDTO.getImg().trim().isEmpty()) {
             try {
                 new URL(productDTO.getImg()).toURI();
@@ -146,8 +166,12 @@ public class ProductController {
             response.put("message", "Cập nhật sản phẩm thành công");
             response.put("product", updatedProduct);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Lỗi khi cập nhật sản phẩm: " + e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body("Sản phẩm không tồn tại với ID: " + id);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi cập nhật sản phẩm: " + e.getMessage());
         }
     }
 
@@ -160,9 +184,11 @@ public class ProductController {
 
         try {
             productService.deleteProduct(id);
-            return ResponseEntity.noContent().build(); // Không trả về body cho mã 204
+            return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body("Sản phẩm không Ascending không tồn tại với ID: " + id);
+            return ResponseEntity.status(404).body("Sản phẩm không tồn tại với ID: " + id);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server khi xóa sản phẩm: " + e.getMessage());
         }
     }
 }

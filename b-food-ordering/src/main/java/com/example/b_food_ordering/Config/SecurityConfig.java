@@ -63,9 +63,11 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/products").permitAll()
-                .requestMatchers("/api/products/**").hasRole("ADMIN")
-                .requestMatchers("/api/user/profile").authenticated() // Cho phép tất cả người dùng đăng nhập
+                .requestMatchers("/api/products", "/api/products/search").permitAll() // Cho phép truy cập công khai
+                .requestMatchers("/api/product-types/**").permitAll() // Thêm endpoint loại sản phẩm
+                .requestMatchers("/api/categories/**").permitAll() // Thêm endpoint danh mục
+                .requestMatchers("/api/products/**").hasRole("ADMIN") // Các endpoint con khác yêu cầu ADMIN
+                .requestMatchers("/api/user/profile").permitAll() // Cho phép tất cả người dùng đăng nhập
                 .requestMatchers("/api/user/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

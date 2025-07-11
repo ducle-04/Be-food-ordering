@@ -12,28 +12,29 @@ public class Product {
     private Long id;
     
     @Column(nullable = false)
-    private String name;
+    private String name; // Tên sản phẩm
     
-    private String description;
-    
-    @Column(nullable = false)
-    private double originalPrice;
-    
-    private double discountedPrice;
-    
-    private double discount;
+    private String description; // Mô tả sản phẩm
     
     @Column(nullable = false)
-    private String category;
+    private double originalPrice; // Giá gốc
     
-    private String img;
+    private double discountedPrice; // Giá sau khi giảm
     
-    // Thêm trường trạng thái
+    private double discount; // Phần trăm giảm giá
+    
+    @ManyToOne
+    @JoinColumn(name = "product_type_id", nullable = false)
+    private ProductType productType; // Loại sản phẩm (ví dụ: "Food", "Drink", "Dessert")
+    
+    private String img; // Đường dẫn ảnh sản phẩm
+    
     @Column(nullable = false)
-    private String status; // Có thể là "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED", etc.
+    private String status; // Trạng thái (ví dụ: "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED")
     
-    // Thêm trường danh mục đặc biệt
-    private String specialCategory; // Ví dụ: "FEATURED", "NEW", "BESTSELLER", etc.
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category; // Danh mục đặc biệt (ví dụ: "FEATURED", "NEW", "BESTSELLER")
 
     public Long getId() {
         return id;
@@ -83,12 +84,12 @@ public class Product {
         this.discount = discount;
     }
 
-    public String getCategory() {
-        return category;
+    public ProductType getProductType() {
+        return productType;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setProductType(ProductType productType) {
+        this.productType = productType;
     }
 
     public String getImg() {
@@ -107,11 +108,11 @@ public class Product {
         this.status = status;
     }
 
-    public String getSpecialCategory() {
-        return specialCategory;
+    public Category getCategory() {
+        return category;
     }
 
-    public void setSpecialCategory(String specialCategory) {
-        this.specialCategory = specialCategory;
+    public void setCategory(Category category) {
+        this.category = category;
     }
 }
