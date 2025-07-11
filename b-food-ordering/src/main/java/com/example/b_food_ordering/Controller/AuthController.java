@@ -36,14 +36,17 @@ public class AuthController {
         String username = body.get("username");
         String password = body.get("password");
         String email = body.get("email");
+        String fullname = body.get("fullname");
+        String address = body.get("address");
+        String phoneNumber = body.get("phoneNumber");
 
         // Kiểm tra đầu vào
         if (username == null || password == null || email == null || 
-            username.trim().isEmpty() || password.trim().isEmpty() || email.trim().isEmpty()) {
+            username.trim().isEmpty() || password.trim().isEmpty() || email.trim().isEmpty() || fullname.trim().isEmpty() ) {
             return ResponseEntity.badRequest().body("Các trường không được để trống");
         }
 
-        User user = userService.registerUser(username, password, email, "USER");
+        User user = userService.registerUser(username, password, email, fullname, address, phoneNumber, "USER");
         return ResponseEntity.ok("Đăng ký người dùng thành công");
     }
 

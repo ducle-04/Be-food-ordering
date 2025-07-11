@@ -15,11 +15,9 @@ public class JwtUtil {
     private final SecretKey secretKey;
     private final long expiration;
 
-    public JwtUtil(@Value("${jwt.secret}") String secret, 
+    public JwtUtil(@Value("${jwt.secret}") String secret,
                    @Value("${jwt.expiration}") long expiration) {
-        // Kiểm tra độ dài của secret, tối thiểu 64 byte (512 bit) cho HS512
         if (secret == null || secret.length() < 64) {
-            // Nếu secret không đủ dài, sử dụng Keys.secretKeyFor để tạo khóa an toàn
             this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
         } else {
             this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
@@ -37,33 +35,31 @@ public class JwtUtil {
                 .compact();
     }
 
+    public Claims extractAllClaims(String token) throws JwtException {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
     public String getUsernameFromToken(String token) {
         try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .getSubject();
+            return extractAllClaims(token).getSubject();
         } catch (JwtException e) {
-            // token invalid hoặc expired
             return null;
         }
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
-                    .build()
-                    .parseClaimsJws(token);
+            extractAllClaims(token);
             return true;
         } catch (JwtException e) {
-            // token không hợp lệ
             return false;
         }
     }
- // Hàm getter để lấy secretKey trong filter
+
     public SecretKey getSecretKey() {
         return secretKey;
     }
