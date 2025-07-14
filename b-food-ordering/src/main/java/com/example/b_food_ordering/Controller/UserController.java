@@ -39,12 +39,35 @@ public class UserController {
         return ResponseEntity.ok(toDTO(user));
     }
 
-    // 1b. Cập nhật profile người dùng hiện tại
+    // 1b. Cập nhật profile người dùng hiện tại (dành cho người dùng thường)
     @PutMapping("/profile")
     public ResponseEntity<UserDTO> updateProfile(@AuthenticationPrincipal UserDetails userDetails,
-                                                 @RequestBody UserDTO dto) {
+                                                @RequestBody UserDTO dto) {
         if (userDetails == null) {
             return ResponseEntity.status(401).build();
+        }
+
+        String username = userDetails.getUsername();
+        if (!username.equals(dto.getUsername())) {
+            return ResponseEntity.status(403).build(); // Không cho sửa người khác
+        }
+
+        // Gọi service update nhưng đảm bảo chỉ sửa thông tin cơ bản, không sửa roles hoặc enabled
+        User updatedUser = userService.updateOwnProfile(username, dto);
+        if (updatedUser == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(toDTO(updatedUser));
+    }
+
+    // 1c. Cập nhật profile admin (mới)
+    @PutMapping("/admin/profile")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDTO> updateAdminProfile(@AuthenticationPrincipal UserDetails userDetails,
+                                                     @RequestBody UserDTO dto) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build(); // Unauthorized
         }
 
         String username = userDetails.getUsername();

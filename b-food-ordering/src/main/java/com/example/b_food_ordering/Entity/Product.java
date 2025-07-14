@@ -12,29 +12,29 @@ public class Product {
     private Long id;
     
     @Column(nullable = false)
-    private String name; // Tên sản phẩm
+    private String name; 
     
-    private String description; // Mô tả sản phẩm
+    private String description; 
     
     @Column(nullable = false)
-    private double originalPrice; // Giá gốc
+    private double originalPrice; 
     
-    private double discountedPrice; // Giá sau khi giảm
+    private double discountedPrice; 
     
-    private double discount; // Phần trăm giảm giá
+    private double discount; 
     
     @ManyToOne
     @JoinColumn(name = "product_type_id", nullable = false)
-    private ProductType productType; // Loại sản phẩm (ví dụ: "Food", "Drink", "Dessert")
+    private ProductType productType; 
     
-    private String img; // Đường dẫn ảnh sản phẩm
+    private String img; 
     
     @Column(nullable = false)
-    private String status; // Trạng thái (ví dụ: "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED")
+    private String status; 
     
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private Category category; // Danh mục đặc biệt (ví dụ: "FEATURED", "NEW", "BESTSELLER")
+    private Category category; 
 
     public Long getId() {
         return id;

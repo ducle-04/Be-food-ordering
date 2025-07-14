@@ -13,7 +13,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -63,12 +62,14 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/products", "/api/products/search").permitAll() // Cho phép truy cập công khai
-                .requestMatchers("/api/product-types/**").permitAll() // Thêm endpoint loại sản phẩm
-                .requestMatchers("/api/categories/**").permitAll() // Thêm endpoint danh mục
-                .requestMatchers("/api/products/**").hasRole("ADMIN") // Các endpoint con khác yêu cầu ADMIN
-                .requestMatchers("/api/user/profile").permitAll() // Cho phép tất cả người dùng đăng nhập
+                .requestMatchers("/api/products", "/api/products/search").permitAll()
+                .requestMatchers("/api/product-types/**").permitAll()
+                .requestMatchers("/api/categories/**").permitAll()
+                .requestMatchers("/api/products/**").hasRole("ADMIN")
+                .requestMatchers("/api/user/profile").permitAll()
+                .requestMatchers("/api/admin/profile").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasRole("ADMIN")
+                .requestMatchers("/api/cart/**").authenticated() // Yêu cầu xác thực cho giỏ hàng
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exception -> exception
