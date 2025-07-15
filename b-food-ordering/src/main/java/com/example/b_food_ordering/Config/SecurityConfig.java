@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/profile").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasRole("ADMIN")
                 .requestMatchers("/api/cart/**").authenticated() // Yêu cầu xác thực cho giỏ hàng
+                .requestMatchers("/api/news", "/api/news/search").permitAll()
+                .requestMatchers("/api/news/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exception -> exception

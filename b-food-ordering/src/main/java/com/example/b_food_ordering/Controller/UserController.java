@@ -61,7 +61,7 @@ public class UserController {
         return ResponseEntity.ok(toDTO(updatedUser));
     }
 
-    // 1c. Cập nhật profile admin (mới)
+    // 1c. Cập nhật profile admin 
     @PutMapping("/admin/profile")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> updateAdminProfile(@AuthenticationPrincipal UserDetails userDetails,

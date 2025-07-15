@@ -5,17 +5,17 @@ import lombok.Data;
 @Data
 public class ProductDTO {
     private Long id;
-    private String name; // Tên sản phẩm
-    private String description; // Mô tả sản phẩm
-    private double originalPrice; // Giá gốc
-    private double discountedPrice; // Giá sau khi giảm
-    private double discount; // Phần trăm giảm giá
-    private Long productTypeId; // ID của loại sản phẩm
-    private String productTypeName; // Tên loại sản phẩm (ví dụ: "Food", "Drink", "Dessert")
-    private String img; // Đường dẫn ảnh sản phẩm
-    private String status; // Trạng thái (ví dụ: "AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED")
-    private Long categoryId; // ID của danh mục (có thể null)
-    private String categoryName; // Tên danh mục (ví dụ: "FEATURED", "NEW", "BESTSELLER")
+    private String name; 
+    private String description; 
+    private double originalPrice; 
+    private double discountedPrice; 
+    private double discount; 
+    private Long productTypeId; 
+    private String productTypeName; 
+    private String img;
+    private String status; 
+    private Long categoryId; 
+    private String categoryName; 
 
     public ProductDTO() {}
 

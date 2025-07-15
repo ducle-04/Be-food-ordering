@@ -9,8 +9,8 @@ public class CartItemDTO {
     private String productName;
     private int quantity;
     private String productImage;
-    private double price; // Giá sản phẩm (ưu tiên discountedPrice nếu có)
-    private double subtotal; // Tổng tiền của mục
+    private double price; 
+    private double subtotal; 
 	public Long getId() {
 		return id;
 	}

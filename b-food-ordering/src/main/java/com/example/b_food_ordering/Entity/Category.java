@@ -12,7 +12,7 @@ public class Category {
     private Long id;
     
     @Column(nullable = false, unique = true)
-    private String name; // Tên danh mục (ví dụ: "FEATURED", "NEW", "BESTSELLER")
+    private String name; 
 
     public Long getId() {
         return id;

@@ -8,7 +8,7 @@ public class CartDTO {
     private Long id;
     private Long userId;
     private List<CartItemDTO> cartItems;
-    private double totalPrice; // Tổng tiền của giỏ hàng
+    private double totalPrice; 
 	public Long getId() {
 		return id;
 	}

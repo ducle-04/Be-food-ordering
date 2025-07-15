@@ -19,7 +19,7 @@ public class Cart {
     private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CartItem> cartItems = new ArrayList<>(); // Khởi tạo danh sách rỗng
+    private List<CartItem> cartItems = new ArrayList<>(); 
 
     public Long getId() {
         return id;

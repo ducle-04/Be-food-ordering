@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class ProductTypeDTO {
     private Long id;
-    private String name; // Tên loại sản phẩm (ví dụ: "Food", "Drink", "Dessert")
+    private String name; 
 
     public ProductTypeDTO() {}
 
