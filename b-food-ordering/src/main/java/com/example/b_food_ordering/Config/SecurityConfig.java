@@ -72,6 +72,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/cart/**").authenticated() // Yêu cầu xác thực cho giỏ hàng
                 .requestMatchers("/api/news", "/api/news/search").permitAll()
                 .requestMatchers("/api/news/**").hasRole("ADMIN")
+                .requestMatchers("/api/booking/create", "/api/booking/history").authenticated() // Yêu cầu xác thực cho đặt bàn và xem lịch sử
+                .requestMatchers("/api/booking/**").hasRole("ADMIN") // Yêu cầu vai trò ADMIN cho các endpoint quản lý đặt bàn
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exception -> exception
