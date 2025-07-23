@@ -5,6 +5,7 @@ import com.example.b_food_ordering.Entity.Booking;
 import com.example.b_food_ordering.Service.BookingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -48,15 +49,23 @@ public class BookingController {
     public ResponseEntity<List<BookingDTO>> getAllBookings() {
         return ResponseEntity.ok(bookingService.getAllBookings());
     }
-
-    // Admin xem chi tiết đơn đặt bàn
+    
+    // Admin và người dùng xem chi tiết đơn đặt bàn
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BookingDTO> getBookingById(@PathVariable Long id) {
+    public ResponseEntity<BookingDTO> getBookingById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
         try {
-            return ResponseEntity.ok(bookingService.getBookingById(id));
+            String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ROLE_USER"))
+                .findFirst()
+                .orElse("ROLE_USER");
+            BookingDTO bookingDTO = bookingService.getBookingById(id, userDetails.getUsername(), role);
+            return ResponseEntity.ok(bookingDTO);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(new BookingDTO(null, null, null, null, null, 0, null, null, null, null, e.getMessage()));
         }
     }
 
@@ -81,7 +90,19 @@ public class BookingController {
             return ResponseEntity.notFound().build();
         }
     }
-
+    // Người dùng hủy đơn đặt bàn
+    @PutMapping("/user/cancel/{id}")
+    public ResponseEntity<BookingDTO> cancelBookingByUser(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            BookingDTO bookingDTO = bookingService.cancelBookingByUser(id, userDetails.getUsername());
+            return ResponseEntity.ok(bookingDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new BookingDTO(null, null, null, null, null, 0, null, null, null, null, e.getMessage()));
+        }
+    }
     // Admin xóa đơn đặt bàn
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasRole('ADMIN')")

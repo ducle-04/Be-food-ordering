@@ -161,6 +161,7 @@ public class CartService {
         return toDTO(cart);
     }
 
+    @Transactional(readOnly = true)
     public CartDTO getCart(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại với ID: " + userId));
@@ -177,5 +178,16 @@ public class CartService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại với ID: " + userId));
 
         cartRepository.findByUser(user).ifPresent(cartRepository::delete);
+    }
+    
+    public Cart getCartEntity(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại với ID: " + userId));
+        return cartRepository.findByUser(user)
+                .orElseGet(() -> {
+                    Cart newCart = new Cart();
+                    newCart.setUser(user);
+                    return cartRepository.save(newCart);
+                });
     }
 }

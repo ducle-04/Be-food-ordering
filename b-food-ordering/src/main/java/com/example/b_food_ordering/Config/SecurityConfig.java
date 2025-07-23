@@ -69,11 +69,15 @@ public class SecurityConfig {
                 .requestMatchers("/api/user/profile").permitAll()
                 .requestMatchers("/api/admin/profile").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasRole("ADMIN")
-                .requestMatchers("/api/cart/**").authenticated() // Yêu cầu xác thực cho giỏ hàng
+                .requestMatchers("/api/cart/**").authenticated() 
                 .requestMatchers("/api/news", "/api/news/search").permitAll()
                 .requestMatchers("/api/news/**").hasRole("ADMIN")
-                .requestMatchers("/api/booking/create", "/api/booking/history").authenticated() // Yêu cầu xác thực cho đặt bàn và xem lịch sử
-                .requestMatchers("/api/booking/**").hasRole("ADMIN") // Yêu cầu vai trò ADMIN cho các endpoint quản lý đặt bàn
+                .requestMatchers("/api/booking/create", "/api/booking/history", "/api/booking/user/cancel/**", "/api/booking/{id}").authenticated()
+                .requestMatchers("/api/booking/**").hasRole("ADMIN")
+                .requestMatchers("/api/orders").authenticated() // Người dùng đặt hàng và xem danh sách đơn hàng của mình
+                .requestMatchers("/api/orders/admin").hasRole("ADMIN") // Admin xem tất cả đơn hàng
+                .requestMatchers("/api/orders/{id}/status").hasRole("ADMIN") // Admin cập nhật trạng thái đơn hàng
+                .requestMatchers("/api/orders/{id}").authenticated() // Người dùng hủy đơn hàng hoặc xem chi tiết
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exception -> exception
