@@ -4,6 +4,7 @@ import com.example.b_food_ordering.Dto.OrderDTO;
 import com.example.b_food_ordering.Dto.OrderItemDTO;
 import com.example.b_food_ordering.Entity.*;
 import com.example.b_food_ordering.Repository.OrderRepository;
+import com.example.b_food_ordering.Repository.PaymentRepository;
 import com.example.b_food_ordering.Repository.ProductRepository;
 import com.example.b_food_ordering.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,25 +22,36 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final PaymentRepository paymentRepository;
     private final CartService cartService;
 
     @Autowired
     public OrderService(OrderRepository orderRepository, UserRepository userRepository,
-                        ProductRepository productRepository, CartService cartService) {
+                        ProductRepository productRepository, PaymentRepository paymentRepository,
+                        CartService cartService) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.paymentRepository = paymentRepository;
         this.cartService = cartService;
     }
 
     @Transactional
-    public OrderDTO createOrder(Long userId, String deliveryAddress, LocalDateTime deliveryDate) {
+    public OrderDTO createOrder(Long userId, String deliveryAddress, LocalDateTime deliveryDate, String paymentMethod) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
 
         Cart cart = cartService.getCartEntity(userId);
         if (cart.getCartItems().isEmpty()) {
             throw new IllegalArgumentException("Giỏ hàng trống");
+        }
+
+        // Validate payment method
+        Payment.PaymentMethod paymentMethodEnum;
+        try {
+            paymentMethodEnum = Payment.PaymentMethod.valueOf(paymentMethod.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Hình thức thanh toán không hợp lệ");
         }
 
         Order order = new Order();
@@ -50,9 +62,9 @@ public class OrderService {
         order.setDeliveryAddress(deliveryAddress);
         order.setOrderDate(LocalDateTime.now());
         order.setDeliveryDate(deliveryDate);
-        order.setPaymentStatus("PENDING");
-        order.setOrderStatus("PENDING");
-        
+        order.setPaymentStatus(Order.PaymentStatus.PENDING);
+        order.setOrderStatus(Order.OrderStatus.PENDING);
+
         List<OrderItem> orderItems = new ArrayList<>();
         double totalAmount = 0.0;
         for (CartItem cartItem : cart.getCartItems()) {
@@ -70,11 +82,18 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
-        cartService.clearCart(userId); 
+
+        // Create Payment entity
+        Payment payment = new Payment();
+        payment.setOrder(savedOrder);
+        payment.setPaymentMethod(paymentMethodEnum);
+        paymentRepository.save(payment);
+
+        cartService.clearCart(userId);
 
         return convertToDTO(savedOrder);
     }
-    
+
     @Transactional
     public List<OrderDTO> getUserOrders(Long userId) {
         User user = userRepository.findById(userId)
@@ -83,7 +102,7 @@ public class OrderService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-    
+
     @Transactional
     public List<OrderDTO> getAllOrders() {
         return orderRepository.findAll().stream()
@@ -95,10 +114,12 @@ public class OrderService {
     public OrderDTO updateOrderStatus(Long orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
-        if (!isValidOrderStatus(newStatus)) {
+        try {
+            Order.OrderStatus statusEnum = Order.OrderStatus.valueOf(newStatus.toUpperCase());
+            order.setOrderStatus(statusEnum);
+        } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Trạng thái đơn hàng không hợp lệ");
         }
-        order.setOrderStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
         return convertToDTO(updatedOrder);
     }
@@ -107,10 +128,12 @@ public class OrderService {
     public OrderDTO updatePaymentStatus(Long orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
-        if (!isValidPaymentStatus(newStatus)) {
+        try {
+            Order.PaymentStatus statusEnum = Order.PaymentStatus.valueOf(newStatus.toUpperCase());
+            order.setPaymentStatus(statusEnum);
+        } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Trạng thái thanh toán không hợp lệ");
         }
-        order.setPaymentStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
         return convertToDTO(updatedOrder);
     }
@@ -119,10 +142,10 @@ public class OrderService {
     public void cancelOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
-        if (!order.getOrderStatus().equals("PENDING") && !order.getOrderStatus().equals("CONFIRMED")) {
+        if (order.getOrderStatus() != Order.OrderStatus.PENDING && order.getOrderStatus() != Order.OrderStatus.CONFIRMED) {
             throw new IllegalArgumentException("Chỉ có thể hủy đơn hàng ở trạng thái Chờ xác nhận hoặc Đã xác nhận");
         }
-        order.setOrderStatus("CANCELLED");
+        order.setOrderStatus(Order.OrderStatus.CANCELLED);
         orderRepository.save(order);
     }
 
@@ -135,9 +158,14 @@ public class OrderService {
         orderDTO.setDeliveryAddress(order.getDeliveryAddress());
         orderDTO.setOrderDate(order.getOrderDate());
         orderDTO.setDeliveryDate(order.getDeliveryDate());
-        orderDTO.setPaymentStatus(order.getPaymentStatus());
-        orderDTO.setOrderStatus(order.getOrderStatus());
+        orderDTO.setPaymentStatus(order.getPaymentStatus().name());
+        orderDTO.setOrderStatus(order.getOrderStatus().name());
         orderDTO.setTotalAmount(order.getTotalAmount());
+        // Fetch payment method from Payment entity
+        Payment payment = paymentRepository.findByOrderId(order.getId());
+        if (payment != null) {
+            orderDTO.setPaymentMethod(payment.getPaymentMethod().name());
+        }
         orderDTO.setOrderItems(order.getOrderItems().stream()
                 .map(this::convertToOrderItemDTO)
                 .collect(Collectors.toList()));
@@ -154,13 +182,5 @@ public class OrderService {
         orderItemDTO.setUnitPrice(orderItem.getUnitPrice());
         orderItemDTO.setSubtotal(orderItem.getSubtotal());
         return orderItemDTO;
-    }
-
-    private boolean isValidOrderStatus(String status) {
-        return List.of("PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED").contains(status);
-    }
-
-    private boolean isValidPaymentStatus(String status) {
-        return List.of("PENDING", "PAID", "FAILED", "REFUNDED").contains(status);
     }
 }

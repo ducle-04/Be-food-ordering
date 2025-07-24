@@ -14,7 +14,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,15 +47,13 @@ public class OrderController {
 
     // Người dùng đặt hàng 
     @PostMapping
-    public ResponseEntity<ResponseDTO<OrderDTO>> createOrder(@RequestBody OrderRequest orderRequest) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
         try {
-            // Kiểm tra thủ công các trường bắt buộc
-            if (orderRequest.getDeliveryAddress() == null || orderRequest.getDeliveryAddress().trim().isEmpty()) {
-                throw new IllegalArgumentException("Địa chỉ giao hàng không được để trống");
-            }
             Long userId = getCurrentUserId();
-            logger.info("Creating order for user {} with delivery address: {}", userId, orderRequest.getDeliveryAddress());
-            OrderDTO order = orderService.createOrder(userId, orderRequest.getDeliveryAddress(), orderRequest.getDeliveryDate());
+            logger.info("Creating order for user {} with delivery address: {} and payment method: {}", 
+                        userId, orderRequest.getDeliveryAddress(), orderRequest.getPaymentMethod());
+            OrderDTO order = orderService.createOrder(userId, orderRequest.getDeliveryAddress(), 
+                                                    orderRequest.getDeliveryDate(), orderRequest.getPaymentMethod());
             return ResponseEntity.status(201).body(new ResponseDTO<>("Đặt hàng thành công", order));
         } catch (IllegalArgumentException e) {
             logger.error("Bad request: {}", e.getMessage());
@@ -113,7 +112,7 @@ public class OrderController {
             return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
         }
     }
-    
+
     // Admin cập nhật trạng thái thanh toán
     @PutMapping("/{id}/payment-status")
     @PreAuthorize("hasRole('ADMIN')")
@@ -130,9 +129,10 @@ public class OrderController {
             return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
         }
     }
+
     // Admin hoặc người dùng hủy đơn hàng
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<ResponseDTO<Object>> cancelOrder(@PathVariable Long id) {
         try {
             Long userId = getCurrentUserId();
@@ -150,8 +150,13 @@ public class OrderController {
 }
 
 class OrderRequest {
+    @NotBlank(message = "Địa chỉ giao hàng không được để trống")
     private String deliveryAddress;
+
     private LocalDateTime deliveryDate;
+
+    @NotBlank(message = "Hình thức thanh toán không được để trống")
+    private String paymentMethod;
 
     // Getters and setters
     public String getDeliveryAddress() {
@@ -168,5 +173,13 @@ class OrderRequest {
 
     public void setDeliveryDate(LocalDateTime deliveryDate) {
         this.deliveryDate = deliveryDate;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }
