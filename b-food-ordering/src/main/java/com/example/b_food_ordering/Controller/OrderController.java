@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -45,8 +46,9 @@ public class OrderController {
         return user.getId();
     }
 
-    // Người dùng đặt hàng 
+    // Người dùng đặt hàng từ giỏ hàng
     @PostMapping
+ 
     public ResponseEntity<ResponseDTO<OrderDTO>> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
         try {
             Long userId = getCurrentUserId();
@@ -55,6 +57,27 @@ public class OrderController {
             OrderDTO order = orderService.createOrder(userId, orderRequest.getDeliveryAddress(), 
                                                     orderRequest.getDeliveryDate(), orderRequest.getPaymentMethod());
             return ResponseEntity.status(201).body(new ResponseDTO<>("Đặt hàng thành công", order));
+        } catch (IllegalArgumentException e) {
+            logger.error("Bad request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Server error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
+        }
+    }
+
+    // Người dùng đặt hàng trực tiếp từ sản phẩm
+    @PostMapping("/create-from-product")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<ResponseDTO<OrderDTO>> createOrderFromProduct(@Valid @RequestBody OrderFromProductRequest orderRequest) {
+        try {
+            Long userId = getCurrentUserId();
+            logger.info("Creating order from product for user {} with productId: {}, quantity: {}, delivery address: {}, and payment method: {}", 
+                        userId, orderRequest.getProductId(), orderRequest.getQuantity(), orderRequest.getDeliveryAddress(), orderRequest.getPaymentMethod());
+            OrderDTO order = orderService.createOrderFromProduct(userId, orderRequest.getProductId(), orderRequest.getQuantity(),
+                                                                orderRequest.getDeliveryAddress(), orderRequest.getDeliveryDate(), 
+                                                                orderRequest.getPaymentMethod());
+            return ResponseEntity.status(201).body(new ResponseDTO<>("Đặt hàng trực tiếp từ sản phẩm thành công", order));
         } catch (IllegalArgumentException e) {
             logger.error("Bad request: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
@@ -159,6 +182,63 @@ class OrderRequest {
     private String paymentMethod;
 
     // Getters and setters
+    public String getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(String deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
+    }
+
+    public LocalDateTime getDeliveryDate() {
+        return deliveryDate;
+    }
+
+    public void setDeliveryDate(LocalDateTime deliveryDate) {
+        this.deliveryDate = deliveryDate;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+}
+
+class OrderFromProductRequest {
+    @Positive(message = "ID sản phẩm phải lớn hơn 0")
+    private Long productId;
+
+    @Positive(message = "Số lượng phải lớn hơn 0")
+    private int quantity;
+
+    @NotBlank(message = "Địa chỉ giao hàng không được để trống")
+    private String deliveryAddress;
+
+    private LocalDateTime deliveryDate;
+
+    @NotBlank(message = "Hình thức thanh toán không được để trống")
+    private String paymentMethod;
+
+    // Getters and setters
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
     public String getDeliveryAddress() {
         return deliveryAddress;
     }

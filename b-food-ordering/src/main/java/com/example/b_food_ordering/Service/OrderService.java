@@ -36,6 +36,7 @@ public class OrderService {
         this.cartService = cartService;
     }
 
+    // Đặt hàng từ giỏ hàng
     @Transactional
     public OrderDTO createOrder(Long userId, String deliveryAddress, LocalDateTime deliveryDate, String paymentMethod) {
         User user = userRepository.findById(userId)
@@ -94,6 +95,75 @@ public class OrderService {
         return convertToDTO(savedOrder);
     }
 
+    // Đặt hàng trực tiếp từ sản phẩm
+    @Transactional
+    public OrderDTO createOrderFromProduct(Long userId, Long productId, int quantity, String deliveryAddress, LocalDateTime deliveryDate, String paymentMethod) {
+        // Validate user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        // Validate product
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+
+        // Validate quantity
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Số lượng sản phẩm phải lớn hơn 0");
+        }
+
+        // Validate product status
+        if (!"AVAILABLE".equalsIgnoreCase(product.getStatus())) {
+            throw new IllegalArgumentException("Sản phẩm không khả dụng để đặt hàng");
+        }
+
+        // Validate payment method
+        Payment.PaymentMethod paymentMethodEnum;
+        try {
+            paymentMethodEnum = Payment.PaymentMethod.valueOf(paymentMethod.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Hình thức thanh toán không hợp lệ");
+        }
+
+        // Create Order
+        Order order = new Order();
+        order.setUser(user);
+        order.setFullname(user.getFullname());
+        order.setEmail(user.getEmail());
+        order.setPhoneNumber(user.getPhoneNumber());
+        order.setDeliveryAddress(deliveryAddress);
+        order.setOrderDate(LocalDateTime.now());
+        order.setDeliveryDate(deliveryDate);
+        order.setPaymentStatus(Order.PaymentStatus.PENDING);
+        order.setOrderStatus(Order.OrderStatus.PENDING);
+
+        // Create OrderItem
+        List<OrderItem> orderItems = new ArrayList<>();
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        orderItem.setQuantity(quantity);
+        orderItem.setUnitPrice(product.getDiscountedPrice() > 0 ? product.getDiscountedPrice() : product.getOriginalPrice());
+        orderItem.updateSubtotal();
+        orderItems.add(orderItem);
+
+        // Calculate total amount
+        double totalAmount = orderItem.getSubtotal();
+        order.setTotalAmount(totalAmount);
+        order.setOrderItems(orderItems);
+
+        // Save Order
+        Order savedOrder = orderRepository.save(order);
+
+        // Create and save Payment
+        Payment payment = new Payment();
+        payment.setOrder(savedOrder);
+        payment.setPaymentMethod(paymentMethodEnum);
+        paymentRepository.save(payment);
+
+        return convertToDTO(savedOrder);
+    }
+    
+    // Lấy danh sách đơn hàng của người dùng
     @Transactional
     public List<OrderDTO> getUserOrders(Long userId) {
         User user = userRepository.findById(userId)
@@ -102,14 +172,16 @@ public class OrderService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
+    
+    // Lấy tất cả đơn hàng
     @Transactional
     public List<OrderDTO> getAllOrders() {
         return orderRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
+    
+    // Cập nhật trạng thái đơn hàng
     @Transactional
     public OrderDTO updateOrderStatus(Long orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)
@@ -124,6 +196,7 @@ public class OrderService {
         return convertToDTO(updatedOrder);
     }
 
+    // Cập nhật trạng thái thanh toán
     @Transactional
     public OrderDTO updatePaymentStatus(Long orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)
@@ -138,6 +211,7 @@ public class OrderService {
         return convertToDTO(updatedOrder);
     }
 
+    // Hủy đơn hàng
     @Transactional
     public void cancelOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
@@ -149,6 +223,7 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    // Chuyển đổi Order sang OrderDTO
     private OrderDTO convertToDTO(Order order) {
         OrderDTO orderDTO = new OrderDTO();
         orderDTO.setId(order.getId());
@@ -172,6 +247,7 @@ public class OrderService {
         return orderDTO;
     }
 
+    // Chuyển đổi OrderItem sang OrderItemDTO
     private OrderItemDTO convertToOrderItemDTO(OrderItem orderItem) {
         OrderItemDTO orderItemDTO = new OrderItemDTO();
         orderItemDTO.setId(orderItem.getId());

@@ -74,10 +74,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/news/**").hasRole("ADMIN")
                 .requestMatchers("/api/booking/create", "/api/booking/history", "/api/booking/user/cancel/**", "/api/booking/{id}").authenticated()
                 .requestMatchers("/api/booking/**").hasRole("ADMIN")
-                .requestMatchers("/api/orders").authenticated() // Người dùng đặt hàng và xem danh sách đơn hàng của mình
-                .requestMatchers("/api/orders/admin").hasRole("ADMIN") // Admin xem tất cả đơn hàng
-                .requestMatchers("/api/orders/{id}/status").hasRole("ADMIN") // Admin cập nhật trạng thái đơn hàng
-                .requestMatchers("/api/orders/{id}").authenticated() // Người dùng hủy đơn hàng hoặc xem chi tiết
+                .requestMatchers("/api/orders").authenticated() 
+                .requestMatchers("/api/orders/admin").hasRole("ADMIN") 
+                .requestMatchers("/api/orders/{id}/status").hasRole("ADMIN") 
+                .requestMatchers("/api/orders/{id}").authenticated() 
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exception -> exception
