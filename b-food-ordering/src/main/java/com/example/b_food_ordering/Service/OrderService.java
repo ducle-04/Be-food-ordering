@@ -38,7 +38,7 @@ public class OrderService {
 
     // Đặt hàng từ giỏ hàng
     @Transactional
-    public OrderDTO createOrder(Long userId, String deliveryAddress, LocalDateTime deliveryDate, String paymentMethod) {
+    public OrderDTO createOrder(Long userId, String deliveryAddress, String paymentMethod) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
 
@@ -62,7 +62,6 @@ public class OrderService {
         order.setPhoneNumber(user.getPhoneNumber());
         order.setDeliveryAddress(deliveryAddress);
         order.setOrderDate(LocalDateTime.now());
-        order.setDeliveryDate(deliveryDate);
         order.setPaymentStatus(Order.PaymentStatus.PENDING);
         order.setOrderStatus(Order.OrderStatus.PENDING);
 
@@ -97,7 +96,7 @@ public class OrderService {
 
     // Đặt hàng trực tiếp từ sản phẩm
     @Transactional
-    public OrderDTO createOrderFromProduct(Long userId, Long productId, int quantity, String deliveryAddress, LocalDateTime deliveryDate, String paymentMethod) {
+    public OrderDTO createOrderFromProduct(Long userId, Long productId, int quantity, String deliveryAddress, String paymentMethod) {
         // Validate user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
@@ -132,7 +131,6 @@ public class OrderService {
         order.setPhoneNumber(user.getPhoneNumber());
         order.setDeliveryAddress(deliveryAddress);
         order.setOrderDate(LocalDateTime.now());
-        order.setDeliveryDate(deliveryDate);
         order.setPaymentStatus(Order.PaymentStatus.PENDING);
         order.setOrderStatus(Order.OrderStatus.PENDING);
 
@@ -210,17 +208,82 @@ public class OrderService {
         Order updatedOrder = orderRepository.save(order);
         return convertToDTO(updatedOrder);
     }
-
-    // Hủy đơn hàng
+    
+    // Người dùng yêu cầu hủy đơn hàng
     @Transactional
-    public void cancelOrder(Long orderId) {
+    public OrderDTO cancelOrder(Long orderId, Long userId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+        if (!order.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Bạn không có quyền hủy đơn hàng này");
+        }
         if (order.getOrderStatus() != Order.OrderStatus.PENDING && order.getOrderStatus() != Order.OrderStatus.CONFIRMED) {
             throw new IllegalArgumentException("Chỉ có thể hủy đơn hàng ở trạng thái Chờ xác nhận hoặc Đã xác nhận");
         }
+        order.setOrderStatus(Order.OrderStatus.CANCEL_REQUESTED);
+        Order updatedOrder = orderRepository.save(order);
+        return convertToDTO(updatedOrder);
+    }
+
+    // Admin đồng ý yêu cầu hủy đơn hàng
+    @Transactional
+    public OrderDTO approveCancelOrderByAdmin(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+        if (order.getOrderStatus() != Order.OrderStatus.CANCEL_REQUESTED) {
+            throw new IllegalArgumentException("Đơn hàng không ở trạng thái yêu cầu hủy");
+        }
         order.setOrderStatus(Order.OrderStatus.CANCELLED);
-        orderRepository.save(order);
+        Order updatedOrder = orderRepository.save(order);
+        return convertToDTO(updatedOrder);
+    }
+
+    // Admin từ chối yêu cầu hủy đơn hàng
+    @Transactional
+    public OrderDTO rejectCancelOrderByAdmin(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+        if (order.getOrderStatus() != Order.OrderStatus.CANCEL_REQUESTED) {
+            throw new IllegalArgumentException("Đơn hàng không ở trạng thái yêu cầu hủy");
+        }
+        order.setOrderStatus(Order.OrderStatus.CONFIRMED);
+        Order updatedOrder = orderRepository.save(order);
+        return convertToDTO(updatedOrder);
+    }
+    
+    // Admin xóa đơn hàng
+    @Transactional
+    public void deleteOrderByAdmin(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+        if (order.getOrderStatus() != Order.OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Chỉ có thể xóa đơn hàng ở trạng thái Đã hủy");
+        }
+        // Xóa Payment liên quan
+        Payment payment = paymentRepository.findByOrderId(orderId);
+        if (payment != null) {
+            paymentRepository.delete(payment);
+        }
+        // Xóa Order (OrderItem sẽ tự động bị xóa nhờ cascade)
+        orderRepository.delete(order);
+    }
+
+    // Admin cập nhật thời gian giao hàng
+    @Transactional
+    public OrderDTO updateDeliveryDateByAdmin(Long orderId, LocalDateTime newDeliveryDate) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+        if (newDeliveryDate == null) {
+            throw new IllegalArgumentException("Thời gian giao hàng không được để trống");
+        }
+        if (newDeliveryDate.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Thời gian giao hàng không được là thời điểm trong quá khứ");
+        }
+        order.setDeliveryDate(newDeliveryDate);
+        Order updatedOrder = orderRepository.save(order);
+        return convertToDTO(updatedOrder);
     }
 
     // Chuyển đổi Order sang OrderDTO

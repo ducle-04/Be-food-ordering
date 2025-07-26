@@ -90,7 +90,8 @@ public class BookingController {
             return ResponseEntity.notFound().build();
         }
     }
-    // Người dùng hủy đơn đặt bàn
+
+    // Người dùng yêu cầu hủy đơn đặt bàn
     @PutMapping("/user/cancel/{id}")
     public ResponseEntity<BookingDTO> cancelBookingByUser(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
@@ -103,6 +104,47 @@ public class BookingController {
             return ResponseEntity.badRequest().body(new BookingDTO(null, null, null, null, null, 0, null, null, null, null, e.getMessage()));
         }
     }
+
+    // Admin đồng ý hủy đơn đặt bàn
+    @PutMapping("/approve-cancel/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BookingDTO> approveCancelBooking(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.equals("ROLE_ADMIN"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Chỉ admin mới có quyền đồng ý hủy đơn đặt bàn"));
+            BookingDTO bookingDTO = bookingService.approveCancelBooking(id, role);
+            return ResponseEntity.ok(bookingDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new BookingDTO(null, null, null, null, null, 0, null, null, null, null, e.getMessage()));
+        }
+    }
+
+    // Admin từ chối hủy đơn đặt bàn
+    @PutMapping("/reject-cancel/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BookingDTO> rejectCancelBooking(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.equals("ROLE_ADMIN"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Chỉ admin mới có quyền từ chối hủy đơn đặt bàn"));
+            BookingDTO bookingDTO = bookingService.rejectCancelBooking(id, role);
+            return ResponseEntity.ok(bookingDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new BookingDTO(null, null, null, null, null, 0, null, null, null, null, e.getMessage()));
+        }
+    }
+
     // Admin xóa đơn đặt bàn
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasRole('ADMIN')")

@@ -48,7 +48,7 @@ public class Booking {
     private User user;
 
     public enum BookingStatus {
-        PENDING, CONFIRMED, CANCELLED
+        PENDING, CONFIRMED, CANCELLED, CANCEL_REQUESTED
     }
 
 	public Long getId() {

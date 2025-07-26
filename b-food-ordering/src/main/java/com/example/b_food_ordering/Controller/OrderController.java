@@ -48,14 +48,14 @@ public class OrderController {
 
     // Người dùng đặt hàng từ giỏ hàng
     @PostMapping
- 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ResponseDTO<OrderDTO>> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
         try {
             Long userId = getCurrentUserId();
             logger.info("Creating order for user {} with delivery address: {} and payment method: {}", 
                         userId, orderRequest.getDeliveryAddress(), orderRequest.getPaymentMethod());
             OrderDTO order = orderService.createOrder(userId, orderRequest.getDeliveryAddress(), 
-                                                    orderRequest.getDeliveryDate(), orderRequest.getPaymentMethod());
+                                                    orderRequest.getPaymentMethod());
             return ResponseEntity.status(201).body(new ResponseDTO<>("Đặt hàng thành công", order));
         } catch (IllegalArgumentException e) {
             logger.error("Bad request: {}", e.getMessage());
@@ -75,8 +75,7 @@ public class OrderController {
             logger.info("Creating order from product for user {} with productId: {}, quantity: {}, delivery address: {}, and payment method: {}", 
                         userId, orderRequest.getProductId(), orderRequest.getQuantity(), orderRequest.getDeliveryAddress(), orderRequest.getPaymentMethod());
             OrderDTO order = orderService.createOrderFromProduct(userId, orderRequest.getProductId(), orderRequest.getQuantity(),
-                                                                orderRequest.getDeliveryAddress(), orderRequest.getDeliveryDate(), 
-                                                                orderRequest.getPaymentMethod());
+                                                                orderRequest.getDeliveryAddress(), orderRequest.getPaymentMethod());
             return ResponseEntity.status(201).body(new ResponseDTO<>("Đặt hàng trực tiếp từ sản phẩm thành công", order));
         } catch (IllegalArgumentException e) {
             logger.error("Bad request: {}", e.getMessage());
@@ -153,15 +152,83 @@ public class OrderController {
         }
     }
 
-    // Admin hoặc người dùng hủy đơn hàng
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ResponseDTO<Object>> cancelOrder(@PathVariable Long id) {
+    // Admin cập nhật thời gian giao hàng
+    @PutMapping("/{id}/delivery-date")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<OrderDTO>> updateDeliveryDate(@PathVariable Long id, @RequestBody DeliveryDateRequest deliveryDateRequest) {
+        try {
+            logger.info("Admin updating delivery date for order {} to {}", id, deliveryDateRequest.getDeliveryDate());
+            OrderDTO order = orderService.updateDeliveryDateByAdmin(id, deliveryDateRequest.getDeliveryDate());
+            return ResponseEntity.ok(new ResponseDTO<>("Cập nhật thời gian giao hàng thành công", order));
+        } catch (IllegalArgumentException e) {
+            logger.error("Bad request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Server error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
+        }
+    }
+
+    // Người dùng yêu cầu hủy đơn hàng
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('USER')")
+    public ResponseEntity<ResponseDTO<OrderDTO>> cancelOrder(@PathVariable Long id) {
         try {
             Long userId = getCurrentUserId();
             logger.info("Canceling order {} for user {}", id, userId);
-            orderService.cancelOrder(id);
-            return ResponseEntity.ok(new ResponseDTO<>("Hủy đơn hàng thành công", null));
+            OrderDTO order = orderService.cancelOrder(id, userId);
+            return ResponseEntity.ok(new ResponseDTO<>("Yêu cầu hủy đơn hàng thành công", order));
+        } catch (IllegalArgumentException e) {
+            logger.error("Bad request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Server error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
+        }
+    }
+
+    // Admin đồng ý yêu cầu hủy đơn hàng
+    @PutMapping("/{id}/approve-cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<OrderDTO>> approveCancelOrder(@PathVariable Long id) {
+        try {
+            logger.info("Admin approving cancel request for order {}", id);
+            OrderDTO order = orderService.approveCancelOrderByAdmin(id);
+            return ResponseEntity.ok(new ResponseDTO<>("Đồng ý yêu cầu hủy đơn hàng thành công", order));
+        } catch (IllegalArgumentException e) {
+            logger.error("Bad request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Server error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
+        }
+    }
+
+    // Admin từ chối yêu cầu hủy đơn hàng
+    @PutMapping("/{id}/reject-cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<OrderDTO>> rejectCancelOrder(@PathVariable Long id) {
+        try {
+            logger.info("Admin rejecting cancel request for order {}", id);
+            OrderDTO order = orderService.rejectCancelOrderByAdmin(id);
+            return ResponseEntity.ok(new ResponseDTO<>("Từ chối yêu cầu hủy đơn hàng thành công", order));
+        } catch (IllegalArgumentException e) {
+            logger.error("Bad request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Server error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ResponseDTO<>("Lỗi server: " + e.getMessage(), null));
+        }
+    }
+
+    // Admin xóa đơn hàng
+    @DeleteMapping("/{id}/delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<Object>> deleteOrder(@PathVariable Long id) {
+        try {
+            logger.info("Admin deleting order {}", id);
+            orderService.deleteOrderByAdmin(id);
+            return ResponseEntity.ok(new ResponseDTO<>("Xóa đơn hàng thành công", null));
         } catch (IllegalArgumentException e) {
             logger.error("Bad request: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ResponseDTO<>("Lỗi: " + e.getMessage(), null));
@@ -176,8 +243,6 @@ class OrderRequest {
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
     private String deliveryAddress;
 
-    private LocalDateTime deliveryDate;
-
     @NotBlank(message = "Hình thức thanh toán không được để trống")
     private String paymentMethod;
 
@@ -188,14 +253,6 @@ class OrderRequest {
 
     public void setDeliveryAddress(String deliveryAddress) {
         this.deliveryAddress = deliveryAddress;
-    }
-
-    public LocalDateTime getDeliveryDate() {
-        return deliveryDate;
-    }
-
-    public void setDeliveryDate(LocalDateTime deliveryDate) {
-        this.deliveryDate = deliveryDate;
     }
 
     public String getPaymentMethod() {
@@ -216,8 +273,6 @@ class OrderFromProductRequest {
 
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
     private String deliveryAddress;
-
-    private LocalDateTime deliveryDate;
 
     @NotBlank(message = "Hình thức thanh toán không được để trống")
     private String paymentMethod;
@@ -247,19 +302,24 @@ class OrderFromProductRequest {
         this.deliveryAddress = deliveryAddress;
     }
 
-    public LocalDateTime getDeliveryDate() {
-        return deliveryDate;
-    }
-
-    public void setDeliveryDate(LocalDateTime deliveryDate) {
-        this.deliveryDate = deliveryDate;
-    }
-
     public String getPaymentMethod() {
         return paymentMethod;
     }
 
     public void setPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+}
+
+class DeliveryDateRequest {
+    private LocalDateTime deliveryDate;
+
+    // Getters and setters
+    public LocalDateTime getDeliveryDate() {
+        return deliveryDate;
+    }
+
+    public void setDeliveryDate(LocalDateTime deliveryDate) {
+        this.deliveryDate = deliveryDate;
     }
 }

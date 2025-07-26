@@ -25,7 +25,7 @@ public class Payment {
 
     
     public enum PaymentMethod {
-        CASH, CARD, BANK_TRANSFER, MOBILE_PAYMENT
+    	CASH_ON_DELIVERY, ONLINE_PAYMENT 
     }
     
     public Long getId() {

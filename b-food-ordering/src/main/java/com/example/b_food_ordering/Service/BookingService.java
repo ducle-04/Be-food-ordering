@@ -100,7 +100,7 @@ public class BookingService {
         b.setStatus(Booking.BookingStatus.CANCELLED);
         return toDTO(bookingRepository.save(b));
     }
-    // Người dùng hủy đơn đặt bàn
+    // Người dùng yêu cầu hủy đơn đặt bàn
     @Transactional
     public BookingDTO cancelBookingByUser(Long id, String username) {
         Optional<Booking> booking = bookingRepository.findById(id);
@@ -114,9 +114,46 @@ public class BookingService {
         if (b.getStatus() != Booking.BookingStatus.PENDING) {
             throw new RuntimeException("Chỉ có thể hủy đơn đặt bàn ở trạng thái chờ xác nhận");
         }
+        b.setStatus(Booking.BookingStatus.CANCEL_REQUESTED);
+        return toDTO(bookingRepository.save(b));
+    }
+    
+    // Admin đồng ý hủy đơn đặt bàn
+    @Transactional
+    public BookingDTO approveCancelBooking(Long id, String role) {
+        if (!role.equals("ROLE_ADMIN")) {
+            throw new RuntimeException("Chỉ admin mới có quyền đồng ý hủy đơn đặt bàn");
+        }
+        Optional<Booking> booking = bookingRepository.findById(id);
+        if (booking.isEmpty()) {
+            throw new RuntimeException("Đơn đặt bàn không tồn tại");
+        }
+        Booking b = booking.get();
+        if (b.getStatus() != Booking.BookingStatus.CANCEL_REQUESTED) {
+            throw new RuntimeException("Đơn đặt bàn không ở trạng thái yêu cầu hủy");
+        }
         b.setStatus(Booking.BookingStatus.CANCELLED);
         return toDTO(bookingRepository.save(b));
     }
+
+    // Admin từ chối hủy đơn đặt bàn
+    @Transactional
+    public BookingDTO rejectCancelBooking(Long id, String role) {
+        if (!role.equals("ROLE_ADMIN")) {
+            throw new RuntimeException("Chỉ admin mới có quyền từ chối hủy đơn đặt bàn");
+        }
+        Optional<Booking> booking = bookingRepository.findById(id);
+        if (booking.isEmpty()) {
+            throw new RuntimeException("Đơn đặt bàn không tồn tại");
+        }
+        Booking b = booking.get();
+        if (b.getStatus() != Booking.BookingStatus.CANCEL_REQUESTED) {
+            throw new RuntimeException("Đơn đặt bàn không ở trạng thái yêu cầu hủy");
+        }
+        b.setStatus(Booking.BookingStatus.CONFIRMED); 
+        return toDTO(bookingRepository.save(b));
+    }
+    
     // Admin xóa đơn đặt bàn
     @Transactional
     public void deleteBooking(Long id) {
