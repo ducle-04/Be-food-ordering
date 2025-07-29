@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -121,7 +124,10 @@ public class OrderController {
     // Admin cập nhật trạng thái đơn hàng
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> updateOrderStatus(
+            @PathVariable @Positive Long id,
+            @RequestParam @Pattern(regexp = "^(PENDING|CONFIRMED|SHIPPING|DELIVERED|CANCELLED|CANCEL_REQUESTED)$",
+                                  message = "Trạng thái đơn hàng phải là PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED hoặc CANCEL_REQUESTED") String status) {
         try {
             logger.info("Admin updating order {} to status {}", id, status);
             OrderDTO order = orderService.updateOrderStatus(id, status);
@@ -138,7 +144,10 @@ public class OrderController {
     // Admin cập nhật trạng thái thanh toán
     @PutMapping("/{id}/payment-status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> updatePaymentStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> updatePaymentStatus(
+            @PathVariable @Positive Long id,
+            @RequestParam @Pattern(regexp = "^(PENDING|PAID|FAILED|REFUNDED)$",
+                                  message = "Trạng thái thanh toán phải là PENDING, PAID, FAILED hoặc REFUNDED") String status) {
         try {
             logger.info("Admin updating payment status for order {} to {}", id, status);
             OrderDTO order = orderService.updatePaymentStatus(id, status);
@@ -155,7 +164,7 @@ public class OrderController {
     // Admin cập nhật thời gian giao hàng
     @PutMapping("/{id}/delivery-date")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> updateDeliveryDate(@PathVariable Long id, @RequestBody DeliveryDateRequest deliveryDateRequest) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> updateDeliveryDate(@PathVariable @Positive Long id, @Valid @RequestBody DeliveryDateRequest deliveryDateRequest) {
         try {
             logger.info("Admin updating delivery date for order {} to {}", id, deliveryDateRequest.getDeliveryDate());
             OrderDTO order = orderService.updateDeliveryDateByAdmin(id, deliveryDateRequest.getDeliveryDate());
@@ -172,7 +181,7 @@ public class OrderController {
     // Người dùng yêu cầu hủy đơn hàng
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('USER')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> cancelOrder(@PathVariable Long id) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> cancelOrder(@PathVariable @Positive Long id) {
         try {
             Long userId = getCurrentUserId();
             logger.info("Canceling order {} for user {}", id, userId);
@@ -190,7 +199,7 @@ public class OrderController {
     // Admin đồng ý yêu cầu hủy đơn hàng
     @PutMapping("/{id}/approve-cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> approveCancelOrder(@PathVariable Long id) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> approveCancelOrder(@PathVariable @Positive Long id) {
         try {
             logger.info("Admin approving cancel request for order {}", id);
             OrderDTO order = orderService.approveCancelOrderByAdmin(id);
@@ -207,7 +216,7 @@ public class OrderController {
     // Admin từ chối yêu cầu hủy đơn hàng
     @PutMapping("/{id}/reject-cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<OrderDTO>> rejectCancelOrder(@PathVariable Long id) {
+    public ResponseEntity<ResponseDTO<OrderDTO>> rejectCancelOrder(@PathVariable @Positive Long id) {
         try {
             logger.info("Admin rejecting cancel request for order {}", id);
             OrderDTO order = orderService.rejectCancelOrderByAdmin(id);
@@ -224,7 +233,7 @@ public class OrderController {
     // Admin xóa đơn hàng
     @DeleteMapping("/{id}/delete")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseDTO<Object>> deleteOrder(@PathVariable Long id) {
+    public ResponseEntity<ResponseDTO<Object>> deleteOrder(@PathVariable @Positive Long id) {
         try {
             logger.info("Admin deleting order {}", id);
             orderService.deleteOrderByAdmin(id);
@@ -241,9 +250,11 @@ public class OrderController {
 
 class OrderRequest {
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
+    @Size(max = 255, message = "Địa chỉ giao hàng không được vượt quá 255 ký tự")
     private String deliveryAddress;
 
     @NotBlank(message = "Hình thức thanh toán không được để trống")
+  
     private String paymentMethod;
 
     // Getters and setters
@@ -272,9 +283,11 @@ class OrderFromProductRequest {
     private int quantity;
 
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
+    @Size(max = 255, message = "Địa chỉ giao hàng không được vượt quá 255 ký tự")
     private String deliveryAddress;
 
     @NotBlank(message = "Hình thức thanh toán không được để trống")
+  
     private String paymentMethod;
 
     // Getters and setters

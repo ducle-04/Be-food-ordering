@@ -4,6 +4,9 @@ import com.example.b_food_ordering.Dto.UserDTO;
 import com.example.b_food_ordering.Entity.Role;
 import com.example.b_food_ordering.Entity.User;
 import com.example.b_food_ordering.Service.UserService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -49,7 +52,7 @@ public class UserController {
 
         String username = userDetails.getUsername();
         if (!username.equals(dto.getUsername())) {
-            return ResponseEntity.status(403).build(); // Không cho sửa người khác
+            return ResponseEntity.status(403).build(); 
         }
 
         // Gọi service update nhưng đảm bảo chỉ sửa thông tin cơ bản, không sửa roles hoặc enabled
@@ -72,7 +75,7 @@ public class UserController {
 
         String username = userDetails.getUsername();
         if (!username.equals(dto.getUsername())) {
-            return ResponseEntity.status(403).build(); // Không cho sửa người khác
+            return ResponseEntity.status(403).build(); 
         }
 
         // Gọi service update nhưng đảm bảo chỉ sửa thông tin cơ bản, không sửa roles hoặc enabled
@@ -114,7 +117,7 @@ public class UserController {
     // 4. Admin tạo user mới
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDTO> createUser(@RequestBody UserDTO dto) {
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO dto) {
         User user = userService.createUser(dto);
         return ResponseEntity.ok(toDTO(user));
     }

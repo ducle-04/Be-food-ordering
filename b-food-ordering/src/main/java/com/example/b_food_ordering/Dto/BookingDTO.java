@@ -1,20 +1,48 @@
 package com.example.b_food_ordering.Dto;
-
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class BookingDTO {
+	@Positive(message = "ID phải là số dương")
     private Long id;
+
+    @NotBlank(message = "Tên đầy đủ không được để trống")
+    @Size(min = 2, max = 100, message = "Tên đầy đủ phải từ 2 đến 100 ký tự")
+    @Pattern(regexp = "^[a-zA-Z\\s\\-']+$", message = "Tên đầy đủ chỉ được chứa chữ cái, khoảng trắng, dấu gạch ngang hoặc dấu nháy đơn")
     private String fullName;
+
+    @NotBlank(message = "Số điện thoại không được để trống")
+    @Pattern(regexp = "^(\\+84|0)[0-9]{9,12}$", message = "Số điện thoại không hợp lệ")
     private String phoneNumber;
+
+    @NotNull(message = "Ngày đặt bàn không được để trống")
+    @FutureOrPresent(message = "Ngày đặt bàn phải là ngày hiện tại hoặc trong tương lai")
     private LocalDate bookingDate;
+
+    @NotNull(message = "Giờ đặt bàn không được để trống")
     private LocalTime bookingTime;
+
+    @NotNull(message = "Số lượng khách không được để trống")
+    @Positive(message = "Số lượng khách phải là số dương")
+    @Max(value = 50, message = "Số lượng khách tối đa là 50")
     private Integer numberOfGuests;
+
+    @Size(max = 255, message = "Khu vực không được vượt quá 255 ký tự")
     private String area;
+
+    @Size(max = 500, message = "Yêu cầu đặc biệt không được vượt quá 500 ký tự")
     private String specialRequests;
+
     private LocalDateTime createdAt;
+
+    
+    @Pattern(regexp = "^(PENDING|CONFIRMED|CANCELLED|CANCEL_REQUESTED)$", 
+             message = "Trạng thái phải là PENDING, CONFIRMED, CANCELLED hoặc CANCEL_REQUESTED")
     private String status;
+
+    
     private String username;
 
     public BookingDTO() {}

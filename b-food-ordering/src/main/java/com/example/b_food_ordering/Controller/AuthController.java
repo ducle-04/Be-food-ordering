@@ -5,12 +5,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.b_food_ordering.Config.JwtUtil;
+import com.example.b_food_ordering.Dto.LoginDTO;
+import com.example.b_food_ordering.Dto.RegisterDTO;
 import com.example.b_food_ordering.Entity.User;
 import com.example.b_food_ordering.Service.UserService;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +22,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+@Validated
 public class AuthController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
@@ -32,48 +37,30 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        String email = body.get("email");
-        String fullname = body.get("fullname");
-        String address = body.get("address");
-        String phoneNumber = body.get("phoneNumber");
-
-        // Kiểm tra đầu vào
-        if (username == null || password == null || email == null || 
-            username.trim().isEmpty() || password.trim().isEmpty() || email.trim().isEmpty() || fullname.trim().isEmpty() ) {
-            return ResponseEntity.badRequest().body("Các trường không được để trống");
-        }
-
-        User user = userService.registerUser(username, password, email, fullname, address, phoneNumber, "USER");
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterDTO registerDTO) {
+        User user = userService.registerUser(
+            registerDTO.getUsername(),
+            registerDTO.getPassword(),
+            registerDTO.getEmail(),
+            registerDTO.getFullname(),
+            registerDTO.getAddress(),
+            registerDTO.getPhoneNumber(),
+            "USER"
+        );
         return ResponseEntity.ok("Đăng ký người dùng thành công");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-
-        System.out.println("Login attempt - Username: " + username);
-        System.out.println("Login attempt - Password: " + password);
-        if (username == null || password == null || username.trim().isEmpty() || password.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Tên đăng nhập và mật khẩu không được để trống");
-        }
-
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO) {
         try {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            System.out.println("UserDetails - Username: " + userDetails.getUsername() + ", Password: " + userDetails.getPassword());
-            String storedPassword = userService.findByUsername(username).getPassword();
-            System.out.println("Stored password from UserService: " + storedPassword);
-            System.out.println("Matches result: " + passwordEncoder.matches(password, storedPassword));
+            UserDetails userDetails = userDetailsService.loadUserByUsername(loginDTO.getUsername());
+            String storedPassword = userService.findByUsername(loginDTO.getUsername()).getPassword();
             
-            if (passwordEncoder.matches(password, storedPassword)) {
+            if (passwordEncoder.matches(loginDTO.getPassword(), storedPassword)) {
                 Set<String> roles = userDetails.getAuthorities().stream()
                         .map(auth -> auth.getAuthority().replace("ROLE_", ""))
                         .collect(Collectors.toSet());
-                String token = jwtUtil.generateToken(username, roles);
-                System.out.println("Generated token: " + token);
+                String token = jwtUtil.generateToken(loginDTO.getUsername(), roles);
                 Map<String, String> response = new HashMap<>();
                 response.put("token", token);
                 return ResponseEntity.ok(response);
@@ -81,7 +68,6 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Thông tin đăng nhập không hợp lệ");
             }
         } catch (UsernameNotFoundException e) {
-            System.out.println("Username not found: " + e.getMessage());
             return ResponseEntity.status(401).body("Thông tin đăng nhập không hợp lệ");
         }
     }

@@ -27,10 +27,10 @@ public class User {
     @Column(nullable = false)
     private String fullname;
 
-    @Column
+    @Column(nullable = false)
     private String address;
 
-    @Column
+    @Column(nullable = false)
     private String phoneNumber;
 
     @ManyToMany(fetch = FetchType.EAGER)

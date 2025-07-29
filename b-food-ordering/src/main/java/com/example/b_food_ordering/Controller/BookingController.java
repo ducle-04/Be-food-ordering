@@ -3,6 +3,9 @@ package com.example.b_food_ordering.Controller;
 import com.example.b_food_ordering.Dto.BookingDTO;
 import com.example.b_food_ordering.Entity.Booking;
 import com.example.b_food_ordering.Service.BookingService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
@@ -25,7 +28,7 @@ public class BookingController {
     // Người dùng đặt bàn
     @PostMapping("/create")
     public ResponseEntity<BookingDTO> createBooking(@AuthenticationPrincipal UserDetails userDetails,
-                                                   @RequestBody BookingDTO dto) {
+    		@Valid @RequestBody BookingDTO dto) {
         if (userDetails == null) {
             return ResponseEntity.status(401).build();
         }
