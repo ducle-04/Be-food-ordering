@@ -25,6 +25,16 @@ public class OrderItemDTO {
     
     @Min(value = 0, message = "Tổng phụ phải lớn hơn hoặc bằng 0")
     private double subtotal;
+    
+    private int totalOrdered;
+
+	public int getTotalOrdered() {
+		return totalOrdered;
+	}
+
+	public void setTotalOrdered(int totalOrdered) {
+		this.totalOrdered = totalOrdered;
+	}
 
 	public Long getId() {
 		return id;

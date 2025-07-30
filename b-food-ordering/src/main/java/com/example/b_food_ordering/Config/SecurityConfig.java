@@ -79,7 +79,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/{id}/status", "/api/orders/{id}/payment-status", 
                         "/api/orders/{id}/approve-cancel", "/api/orders/{id}/reject-cancel", "/api/orders/{id}/delete", "/api/orders/{id}/delivery-date").hasRole("ADMIN") 
                 .requestMatchers("/api/orders/{id}", "/api/orders/{id}/cancel").authenticated() 
-     
+                .requestMatchers("/api/statistics/**").hasRole("ADMIN")
                
                 .anyRequest().authenticated()
             )

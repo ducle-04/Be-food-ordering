@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class BookingDTO {
-	@Positive(message = "ID phải là số dương")
+	
     private Long id;
 
     @NotBlank(message = "Tên đầy đủ không được để trống")
