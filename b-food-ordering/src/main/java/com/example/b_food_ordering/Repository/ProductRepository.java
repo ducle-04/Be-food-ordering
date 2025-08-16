@@ -33,4 +33,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Kiểm tra sự tồn tại của sản phẩm theo ID danh mục
     boolean existsByCategoryId(Long categoryId);
+    
 }

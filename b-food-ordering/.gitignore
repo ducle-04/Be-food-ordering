@@ -34,3 +34,5 @@ build/
 # Bỏ qua các file lỗi JVM
 hs_err_pid*.log
 replay_pid*.log
+
+.env

@@ -65,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/products", "/api/products/search").permitAll()
                 .requestMatchers("/api/product-types/**").permitAll()
                 .requestMatchers("/api/categories/**").permitAll()
+                .requestMatchers("/api/chatbot").permitAll()
                 .requestMatchers("/api/products/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/profile").permitAll()
                 .requestMatchers("/api/admin/profile").hasRole("ADMIN")
