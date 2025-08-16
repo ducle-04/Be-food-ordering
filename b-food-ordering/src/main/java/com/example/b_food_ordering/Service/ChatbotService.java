@@ -1,6 +1,8 @@
 package com.example.b_food_ordering.Service;
 
 import com.example.b_food_ordering.Dto.ProductDTO;
+import com.example.b_food_ordering.Dto.ProductTypeDTO;
+import com.example.b_food_ordering.Dto.CategoryDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
@@ -12,12 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +24,8 @@ public class ChatbotService {
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#,##0");
 
     private final ProductService productService;
+    private final ProductTypeService productTypeService; 
+    private final CategoryService categoryService;       
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
 
@@ -34,8 +33,11 @@ public class ChatbotService {
     private String groqApiKey;
 
     @Autowired
-    public ChatbotService(ProductService productService, OkHttpClient httpClient, ObjectMapper objectMapper) {
+    public ChatbotService(ProductService productService, ProductTypeService productTypeService,
+                         CategoryService categoryService, OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.productService = productService;
+        this.productTypeService = productTypeService;
+        this.categoryService = categoryService;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
     }
@@ -78,65 +80,106 @@ public class ChatbotService {
     }
 
     private List<ProductDTO> fetchRelevantProducts(String userQuery) {
+        // Lấy toàn bộ sản phẩm AVAILABLE 1 lần để giảm số lần query/phép lọc lặp
+        List<ProductDTO> allAvailable = productService.getAllProducts().stream()
+                .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                .collect(Collectors.toList());
+
+        // Nếu query rỗng -> random 5 món AVAILABLE
         if (userQuery == null || userQuery.trim().isEmpty()) {
-            logger.info("Câu hỏi rỗng, trả về 5 sản phẩm ngẫu nhiên có trạng thái AVAILABLE");
-            List<ProductDTO> allProducts = productService.getAllProducts().stream()
-                    .filter(p -> "AVAILABLE".equals(p.getStatus()))
-                    .collect(Collectors.toList());
-            // Xáo trộn và lấy tối đa 5 sản phẩm ngẫu nhiên
-            Collections.shuffle(allProducts);
-            return allProducts.stream().limit(5).collect(Collectors.toList());
+            Collections.shuffle(allAvailable);
+            return allAvailable.stream().limit(5).collect(Collectors.toList());
         }
 
-        String lowerQuery = userQuery.toLowerCase();
-        List<ProductDTO> products;
+        String lowerQuery = userQuery.toLowerCase(Locale.ROOT).trim();
 
-        // Kiểm tra ý định tìm kiếm
-        if (lowerQuery.contains("tìm") || lowerQuery.contains("món") || lowerQuery.contains("ăn gì")) {
-            // Loại bỏ từ khóa "tìm", "món", "ăn gì" để lấy từ khóa tìm kiếm
-            String searchTerm = lowerQuery.replaceAll("tìm|món|ăn gì", "").trim();
-            
-            if (searchTerm.isEmpty()) {
-                logger.info("Không có từ khóa cụ thể, trả về 5 sản phẩm ngẫu nhiên có trạng thái AVAILABLE");
-                products = productService.getAllProducts().stream()
-                        .filter(p -> "AVAILABLE".equals(p.getStatus()))
-                        .collect(Collectors.toList());
-                Collections.shuffle(products);
-                products = products.stream().limit(5).collect(Collectors.toList());
-            } else {
-                logger.info("Tìm kiếm sản phẩm với từ khóa: {}", searchTerm);
+        // Phát hiện ý định tìm kiếm đơn giản
+        boolean isSearchIntent =
+                lowerQuery.contains("tìm") ||
+                lowerQuery.contains("món") ||
+                lowerQuery.contains("ăn gì") ||
+                lowerQuery.contains("nhà hàng") ||
+                lowerQuery.contains("gợi ý") ||
+                lowerQuery.contains("có")|| 
+        		lowerQuery.contains("không");
+
+        // Chuẩn hoá từ khoá để tìm
+        String searchTerm = lowerQuery
+                .replaceAll("\\b(tìm|món|ăn gì|nhà hàng|gợi ý|có|không|1|vài|một|tôi|mình|đề xuất|)\\b", "") // bỏ stop-words cơ bản
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        // Dùng map theo id để loại trùng (giữ món đầu tiên tìm thấy)
+        Map<Long, ProductDTO> dedupById = new LinkedHashMap<>();
+
+        if (isSearchIntent) {
+            // 1) Tên sản phẩm
+            if (!searchTerm.isEmpty()) {
                 try {
-                    products = productService.searchProductsByName(searchTerm).stream()
-                            .filter(p -> "AVAILABLE".equals(p.getStatus()))
+                    List<ProductDTO> byName = productService.searchProductsByName(searchTerm).stream()
+                            .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
                             .collect(Collectors.toList());
-                    if (products.isEmpty()) {
-                        logger.info("Không tìm thấy sản phẩm với từ khóa '{}', trả về 5 sản phẩm ngẫu nhiên", searchTerm);
-                        products = productService.getAllProducts().stream()
-                                .filter(p -> "AVAILABLE".equals(p.getStatus()))
-                                .collect(Collectors.toList());
-                        Collections.shuffle(products);
-                        products = products.stream().limit(5).collect(Collectors.toList());
-                    }
+                    byName.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                    logger.info("Tìm thấy {} sản phẩm theo tên", byName.size());
                 } catch (IllegalArgumentException e) {
-                    logger.warn("Lỗi tìm kiếm với từ khóa '{}': {}", searchTerm, e.getMessage());
-                    products = productService.getAllProducts().stream()
-                            .filter(p -> "AVAILABLE".equals(p.getStatus()))
-                            .collect(Collectors.toList());
-                    Collections.shuffle(products);
-                    products = products.stream().limit(5).collect(Collectors.toList());
+                    logger.warn("Lỗi tìm theo tên '{}': {}", searchTerm, e.getMessage());
                 }
             }
-        } else {
-            logger.info("Không có từ khóa tìm kiếm, trả về 5 sản phẩm ngẫu nhiên có trạng thái AVAILABLE");
-            products = productService.getAllProducts().stream()
-                    .filter(p -> "AVAILABLE".equals(p.getStatus()))
-                    .collect(Collectors.toList());
-            Collections.shuffle(products);
-            products = products.stream().limit(5).collect(Collectors.toList());
+
+            // 2) Theo loại sản phẩm
+            try {
+                // Tìm loại có chứa từ khoá (nếu rỗng thì bỏ qua)
+                if (!searchTerm.isEmpty()) {
+                    productTypeService.getAllProductTypes().stream()
+                            .filter(pt -> pt.getName() != null &&
+                                    pt.getName().toLowerCase(Locale.ROOT).contains(searchTerm))
+                            .findFirst()
+                            .ifPresent(pt -> {
+                                List<ProductDTO> byType = productService.getProductsByProductTypeId(pt.getId()).stream()
+                                        .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                                        .collect(Collectors.toList());
+                                byType.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                                logger.info("Tìm thấy {} sản phẩm theo loại '{}'", byType.size(), pt.getName());
+                            });
+                }
+            } catch (Exception e) {
+                logger.warn("Lỗi tìm theo loại '{}': {}", searchTerm, e.getMessage());
+            }
+
+            // 3) Theo danh mục
+            try {
+                if (!searchTerm.isEmpty()) {
+                    categoryService.getAllCategories().stream()
+                            .filter(c -> c.getName() != null &&
+                                    c.getName().toLowerCase(Locale.ROOT).contains(searchTerm))
+                            .findFirst()
+                            .ifPresent(cat -> {
+                                List<ProductDTO> byCat = productService.getProductsByCategoryId(cat.getId()).stream()
+                                        .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                                        .collect(Collectors.toList());
+                                byCat.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                                logger.info("Tìm thấy {} sản phẩm theo danh mục '{}'", byCat.size(), cat.getName());
+                            });
+                }
+            } catch (Exception e) {
+                logger.warn("Lỗi tìm theo danh mục '{}': {}", searchTerm, e.getMessage());
+            }
         }
 
-        return products;
+        List<ProductDTO> collected = new ArrayList<>(dedupById.values());
+
+        // Nếu sau khi tìm vẫn rỗng -> fallback ngẫu nhiên từ allAvailable
+        if (collected.isEmpty()) {
+            logger.info("Không tìm thấy theo từ khoá '{}', trả về 5 sản phẩm ngẫu nhiên", lowerQuery);
+            Collections.shuffle(allAvailable);
+            return allAvailable.stream().limit(5).collect(Collectors.toList());
+        }
+
+        // Xáo trộn và giới hạn 5
+        Collections.shuffle(collected);
+        return collected.stream().limit(5).collect(Collectors.toList());
     }
+
 
     private String generateProductSummary(List<ProductDTO> products) {
         if (products.isEmpty()) {
