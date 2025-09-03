@@ -208,7 +208,7 @@ public class ChatbotService {
         
         // Tạo JSON body
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "llama3-8b-8192");
+        requestBody.put("model", "llama-3.1-8b-instant");
         Map<String, String> userMsg = new HashMap<>();
         userMsg.put("role", "user");
         userMsg.put("content", prompt);
