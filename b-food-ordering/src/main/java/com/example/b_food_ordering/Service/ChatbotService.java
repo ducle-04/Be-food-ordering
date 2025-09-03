@@ -100,13 +100,15 @@ public class ChatbotService {
                 lowerQuery.contains("ăn gì") ||
                 lowerQuery.contains("nhà hàng") ||
                 lowerQuery.contains("gợi ý") ||
+                lowerQuery.contains("tư vấn") ||
                 lowerQuery.contains("có")|| 
         		lowerQuery.contains("không");
 
         // Chuẩn hoá từ khoá để tìm
         String searchTerm = lowerQuery
-                .replaceAll("\\b(tìm|món|ăn gì|nhà hàng|gợi ý|có|không|1|vài|một|tôi|mình|đề xuất|)\\b", "") // bỏ stop-words cơ bản
+                .replaceAll("\\b(tìm|món|ăn|gì|nhà hàng|gợi ý|tư vấn|các|của|nào|nhất|có|không|1|vài|một|tôi|mình||về|đề xuất|)\\b", "") // bỏ stop-words cơ bản
                 .replaceAll("\\s+", " ")
+                .replaceAll("[?]", "")
                 .trim();
 
         // Dùng map theo id để loại trùng (giữ món đầu tiên tìm thấy)
